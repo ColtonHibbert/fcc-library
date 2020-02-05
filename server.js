@@ -7,9 +7,26 @@ var cors        = require('cors');
 var apiRoutes         = require('./routes/api.js');
 var fccTestingRoutes  = require('./routes/fcctesting.js');
 var runner            = require('./test-runner');
+const helmet = require('helmet');
+const knex = require('knex');
+require('dotenv').config();
+
+console.log(process.env.USER)
+const db = knex({
+  client: 'pg',
+  connection: {
+    host: '127.0.0.1',
+    user: process.env.USER,
+    password: process.env.PASS,
+    database: 'fcclibrary'
+  }
+})
+
+//db.select('*').from('book').then(res => console.log(res))
 
 var app = express();
 
+app.use(helmet.hidePoweredBy({ setTo: 'PHP 4.2.0' }));
 app.use('/public', express.static(process.cwd() + '/public'));
 
 app.use(cors({origin: '*'})); //USED FOR FCC TESTING PURPOSES ONLY!
@@ -27,7 +44,7 @@ app.route('/')
 fccTestingRoutes(app);
 
 //Routing for API 
-apiRoutes(app);  
+apiRoutes(app,db);  
     
 //404 Not Found Middleware
 app.use(function(req, res, next) {
@@ -38,7 +55,8 @@ app.use(function(req, res, next) {
 
 //Start our server and tests!
 app.listen(process.env.PORT || 3000, function () {
-  console.log("Listening on port " + process.env.PORT);
+  console.log("Listening on port 3000 or " + process.env.PORT);
+  //set env here for test 
   if(process.env.NODE_ENV==='test') {
     console.log('Running Tests...');
     setTimeout(function () {
