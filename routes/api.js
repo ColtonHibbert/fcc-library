@@ -85,13 +85,20 @@ module.exports = function (app,db) {
       let bookResponse = null;
       let commentResponse = null;
       let commentsArray = [];
+      await db.transaction(trx => {
+        trx('book').where('_id', '=', bookid).increment('commentcount', 1)
+        .then(trx.commit)
+        .catch(trx.rollback)
+      })
+      .catch(err => console.log(err))
       await db.select('_id', 'title').from('book').where('_id', '=', bookid).then(data => bookResponse = data[0]).catch(err => console.log(err))
       await db.transaction(trx => {
         trx.insert({comments: comment, book_id: bookResponse._id })
         .into('comment')
         .then(trx.commit)
         .catch(trx.rollback)
-      }).catch(err => console.log(err))
+      })
+      .catch(err => console.log(err))
       await db.select('comments').from('comment').where('book_id', '=',  bookResponse._id).then(data => commentResponse = data).catch(err => console.log(err));
       for(let i = 0; i < commentResponse.length; i++) {
         commentsArray.push(commentResponse[i].comments)
@@ -104,6 +111,13 @@ module.exports = function (app,db) {
     
     .delete(function(req, res){
       var bookid = req.params.id;
+      db.transaction(trx => {
+        trx('book').where('_id', '=', bookid).del()
+        .then(trx.commit)
+        .then( () => res.json('delete successful'))
+        .catch(trx.rollback);
+      })
+      .catch(err => console.log(err))
       //if successful response will be 'delete successful'
     });
   
