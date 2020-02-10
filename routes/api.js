@@ -28,21 +28,25 @@ module.exports = function (app,db) {
     
     .post(async function (req, res){
       const title = req.body.title;
-      let dbResponse = null;
+      let bookResponse = null;
+      let commentResponse = null;
       await db.transaction(trx => {
         trx.insert({title: title}).into('book')
-        .returning(['id', 'title'])
+        .returning(['_id', 'title'])
         .then(data => {
-          dbResponse = data[0];
+          bookResponse = data[0];
           //console.log(data);
         })
         .then(trx.commit)
         .catch(trx.rollback)
       })
       .catch(err => console.log(err))
-      //response will contain new book object including atleast _id and title
-      console.log(dbResponse);
-      res.json({'_id': dbResponse.id, 'title': dbResponse.title})
+      //console.log(bookResponse);
+      
+      await db.select('comments').from('comment').where('book_id', '=',  bookResponse._id).then(data => commentResponse = data);
+      console.log('here is the comment response', commentResponse)
+      console.log('here is the post response', {'title': bookResponse.title, 'comments': commentResponse ,'_id': bookResponse._id});
+      res.json({'title': bookResponse.title, 'comments': commentResponse ,'_id': bookResponse._id});
     })
     
     .delete(function(req, res){
@@ -50,16 +54,51 @@ module.exports = function (app,db) {
     });
 
 
-
   app.route('/api/books/:id')
-    .get(function (req, res){
+    .get( async function (req, res){
       var bookid = req.params.id;
+      console.log('book id in get with params', bookid)
+      let bookResponse = null;
+      let commentResponse = null;
+      let commentsArray = [];
+
+      await db.select('_id', 'title').from('book').where('_id', '=', bookid).then(data => bookResponse = data[0]).catch(err => console.log(err))
+      //console.log(bookResponse)
+      await db.select('comments').from('comment').where('book_id', '=',  bookResponse._id).then(data => commentResponse = data).catch(err => console.log(err));
+      //console.log(commentResponse);
+      for(let i = 0; i < commentResponse.length; i++) {
+        commentsArray.push(commentResponse[i].comments)
+      }
+      console.log('here is the get response with id param', {'_id': bookResponse._id, 'title': bookResponse.title, 'comments': commentsArray }); 
+      res.json({ '_id': bookResponse._id, 'title': bookResponse.title, 'comments': commentsArray });
+      // db('book').join('comment', 'book._id', '=', 'comment.book_id')
+      // .select('book._id', 'book.title', 'comment.comments')
+      // .then(
+      //   data => console.log('here response in get with params', data)
+      // )
       //json res format: {"_id": bookid, "title": book_title, "comments": [comment,comment,...]}
     })
     
-    .post(function(req, res){
+    .post(async function(req, res){
       var bookid = req.params.id;
       var comment = req.body.comment;
+      let bookResponse = null;
+      let commentResponse = null;
+      let commentsArray = [];
+      await db.select('_id', 'title').from('book').where('_id', '=', bookid).then(data => bookResponse = data[0]).catch(err => console.log(err))
+      await db.transaction(trx => {
+        trx.insert({comments: comment, book_id: bookResponse._id })
+        .into('comment')
+        .then(trx.commit)
+        .catch(trx.rollback)
+      }).catch(err => console.log(err))
+      await db.select('comments').from('comment').where('book_id', '=',  bookResponse._id).then(data => commentResponse = data).catch(err => console.log(err));
+      for(let i = 0; i < commentResponse.length; i++) {
+        commentsArray.push(commentResponse[i].comments)
+      }
+      console.log('here is the post response with id param', {'_id': bookResponse._id, 'title': bookResponse.title, 'comments': commentsArray }); 
+      res.json({ '_id': bookResponse._id, 'title': bookResponse.title, 'comments': commentsArray });
+      
       //json res format same as .get
     })
     
