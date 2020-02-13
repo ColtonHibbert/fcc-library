@@ -41,7 +41,22 @@ suite('Functional Tests', function() {
     suite('POST /api/books with title => create book object/expect book object', function() {
       
       test('Test POST /api/books with title', function(done) {
-        //done();
+        chai.request(server)
+        .post('/api/books')
+        .send({title : 'harry potter'})
+        .end( async function(err, res) {
+          //console.log('in test, res.body', res.body)
+          assert.equal(res.status, 200);
+          assert.property(res.body, 'title', 'response should have title');
+          assert.isString(res.body.title, 'title is a string')
+          assert.property(res.body, '_id', 'response should have an _id');
+          assert.isNumber(res.body._id, '_id is a number');
+          assert.property(res.body, 'comments', 'response has an array of comments');
+          assert.isArray(res.body.comments, 'comments is an array');
+          assert.lengthOf(res.body.comments, 0, 'comments is an empty array')
+          done();
+        })
+        
       });
       
       test('Test POST /api/books with no title given', function(done) {

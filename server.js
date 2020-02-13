@@ -57,6 +57,7 @@ app.use(function(req, res, next) {
 app.listen(process.env.PORT || 3000, function () {
   console.log("Listening on port 3000 or " + process.env.PORT);
   //set env here for test 
+  process.env.NODE_ENV = 'test';
   if(process.env.NODE_ENV==='test') {
     console.log('Running Tests...');
     setTimeout(function () {
