@@ -10,8 +10,19 @@ var chaiHttp = require('chai-http');
 var chai = require('chai');
 var assert = chai.assert;
 var server = require('../server');
+var knex = require('knex');
 
 chai.use(chaiHttp);
+
+const db = knex({
+  client: 'pg',
+  connection: {
+    host: '127.0.0.1',
+    user: process.env.USER,
+    password: process.env.PASS,
+    database: 'fcclibrary'
+  }
+})
 
 suite('Functional Tests', function() {
 
@@ -44,7 +55,7 @@ suite('Functional Tests', function() {
         chai.request(server)
         .post('/api/books')
         .send({title : 'harry potter'})
-        .end( async function(err, res) {
+        .end( function(err, res) {
           //console.log('in test, res.body', res.body)
           assert.equal(res.status, 200);
           assert.property(res.body, 'title', 'response should have title');
@@ -60,7 +71,14 @@ suite('Functional Tests', function() {
       });
       
       test('Test POST /api/books with no title given', function(done) {
-        //done();
+        chai.request(server)
+        .post('/api/books')
+        .send({title: ""})
+        .end( function(err, res) {
+          assert.equal(res.status, 200);
+          assert.equal(res.body, 'missing title');
+          done();
+        })
       });
       
     });
@@ -69,7 +87,16 @@ suite('Functional Tests', function() {
     suite('GET /api/books => array of books', function(){
       
       test('Test GET /api/books',  function(done){
-        //done();
+        chai.request(server)
+        .get('/api/books')
+        .end( function(err, res) {
+          assert.equal(res.status, 200);
+          assert.isArray(res.body, 'response is an array');
+          assert.property(res.body[0], 'commentcount', 'books in array contain commentcount property');
+          assert.property(res.body[0], 'title', 'books in array contain title property');
+          assert.property(res.body[0], '_id', 'books in array contain _id property');
+          done();
+        })
       });      
       
     });
@@ -78,11 +105,41 @@ suite('Functional Tests', function() {
     suite('GET /api/books/[id] => book object with [id]', function(){
       
       test('Test GET /api/books/[id] with id not in db',  function(done){
-        //done();
+        chai.request(server)
+        .get('/api/books/0')
+        .end(function (err, res) {
+          assert.equal(res.status, 200);
+          assert.equal(res.body, 'no book exists');
+          done();
+        })
       });
       
       test('Test GET /api/books/[id] with valid id in db',  function(done){
-        //done();
+        // grab books, get id from first book
+        async function runValidId() {
+          let id = null;
+
+          await db.select("_id").from('book').limit(1)
+          .then(data => id = data[0]._id)
+
+          console.log('id in test', id);
+
+          chai.request(server)
+          .get(`/api/books/${id}`)
+          //.query({_id: id})
+          .end(function (err, res) {
+            console.log(res.body,  'res.body in test for id valid')
+            assert.equal(res.status, 200);
+            assert.property(res.body, 'title', 'response should have title');
+            assert.isString(res.body.title, 'title is a string')
+            assert.property(res.body, '_id', 'response should have an _id');
+            assert.isNumber(res.body._id, '_id is a number');
+            assert.property(res.body, 'comments', 'response has an array of comments');
+            assert.isArray(res.body.comments, 'comments is an array');
+            done();
+          })
+        }
+        runValidId();
       });
       
     });
@@ -91,7 +148,30 @@ suite('Functional Tests', function() {
     suite('POST /api/books/[id] => add comment/expect book object with id', function(){
       
       test('Test POST /api/books/[id] with comment', function(done){
-        //done();
+        async function runAsync() {
+          let id = null;
+
+          await db.select("_id").from('book').limit(1).then(data => id = data[0]._id)
+
+          console.log('id in test', id);
+
+          chai.request(server)
+          .post(`/api/books/${id}`)
+          .send({comment: 'test comment'})
+          .end(function (err, res) {
+            assert.equal(res.status, 200);
+            assert.property(res.body, 'title', 'response should have title');
+            assert.isString(res.body.title, 'title is a string')
+            assert.property(res.body, '_id', 'response should have an _id');
+            assert.isNumber(res.body._id, '_id is a number');
+            assert.property(res.body, 'comments', 'response has an array of comments');
+            assert.isArray(res.body.comments, 'comments is an array');
+            done();
+          })
+        }
+  
+        runAsync();
+       
       });
       
     });

@@ -21,13 +21,17 @@ module.exports = function (app,db) {
       let dbResponse = null;
       await db.select('*').from('book').then(data => dbResponse = data)
       //console.log(dbResponse);
-      res.json(dbResponse)
+      return res.json(dbResponse)
       //response will be array of book objects
       //json res format: [{"_id": bookid, "title": book_title, "commentcount": num_of_comments },...]
     })
     
     .post(async function (req, res){
       const title = req.body.title;
+      console.log('here is title in post', title)
+      if(title === "") {
+        return res.json('missing title');
+      }
       let bookResponse = null;
       let commentResponse = null;
       await db.transaction(trx => {
@@ -46,7 +50,7 @@ module.exports = function (app,db) {
       await db.select('comments').from('comment').where('book_id', '=',  bookResponse._id).then(data => commentResponse = data);
       //console.log('here is the comment response', commentResponse)
      // console.log('here is the post response', {'title': bookResponse.title, 'comments': commentResponse ,'_id': bookResponse._id});
-      res.json({'title': bookResponse.title, 'comments': commentResponse ,'_id': bookResponse._id});
+      return res.json({'title': bookResponse.title, 'comments': commentResponse ,'_id': bookResponse._id});
     })
     
     .delete(function(req, res){
@@ -64,16 +68,18 @@ module.exports = function (app,db) {
 
   app.route('/api/books/:id')
     .get( async function (req, res){
+      console.log('req.params in api', req.params)
       var bookid = req.params.id;
-      //console.log('book id in get with params', bookid)
+      console.log('book id in get with params', bookid)
       let bookResponse = null;
       let commentResponse = null;
       let commentsArray = [];
 
       await db.select('_id', 'title').from('book').where('_id', '=', bookid).then(data => bookResponse = data[0]).catch(err => console.log(err))
-      //console.log(bookResponse, 'bookResponse')
+      console.log(bookResponse, 'bookResponse')
       if(bookResponse === undefined) {
-        res.json('no book exists')
+        console.log('res.json should be no book exists')
+        return res.json('no book exists')
       }
       await db.select('comments').from('comment').where('book_id', '=',  bookResponse._id).then(data => commentResponse = data).catch(err => console.log(err));
       //console.log(commentResponse);
@@ -82,7 +88,7 @@ module.exports = function (app,db) {
         commentsArray.push(commentResponse[i].comments)
       }
       //console.log('here is the get response with id param', {'_id': bookResponse._id, 'title': bookResponse.title, 'comments': commentsArray }); 
-      res.json({ '_id': bookResponse._id, 'title': bookResponse.title, 'comments': commentsArray });
+      return res.json({ '_id': bookResponse._id, 'title': bookResponse.title, 'comments': commentsArray });
     })
     
     .post(async function(req, res){
@@ -110,7 +116,7 @@ module.exports = function (app,db) {
         commentsArray.push(commentResponse[i].comments)
       }
       //console.log('here is the post response with id param', {'_id': bookResponse._id, 'title': bookResponse.title, 'comments': commentsArray }); 
-      res.json({ '_id': bookResponse._id, 'title': bookResponse.title, 'comments': commentsArray });
+      return res.json({ '_id': bookResponse._id, 'title': bookResponse.title, 'comments': commentsArray });
       
       //json res format same as .get
     })
