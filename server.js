@@ -11,14 +11,22 @@ const helmet = require('helmet');
 const knex = require('knex');
 require('dotenv').config();
 
-console.log(process.env.USER)
+//console.log(process.env.USER)
+// const db = knex({
+//   client: 'pg',
+//   connection: {
+//     host: '127.0.0.1',
+//     user: process.env.USER,
+//     password: process.env.PASS,
+//     database: 'fcclibrary'
+//   }
+//})
+
 const db = knex({
   client: 'pg',
   connection: {
-    host: '127.0.0.1',
-    user: process.env.USER,
-    password: process.env.PASS,
-    database: 'fcclibrary'
+    connectionString: process.env.DATABASE_URL,
+    ssl: true
   }
 })
 
